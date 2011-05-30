@@ -5,11 +5,11 @@
 
 struct swf_chardef *swf_chardef_new()
 {
-	struct swf_chardef *cd;
+	struct swf_chardef *def;
 
-	cd = (struct swf_chardef*) malloc(sizeof(struct swf_chardef));
+	def = (struct swf_chardef*) malloc(sizeof(struct swf_chardef));
 
-	if (cd) memset(cd, 0, sizeof(struct swf_chardef));
+	if (def) memset(def, 0, sizeof(struct swf_chardef));
 
-	return cd;
+	return def;
 }

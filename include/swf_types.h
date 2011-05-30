@@ -79,20 +79,16 @@ struct swf_reader {
 	uint32_t bitpos;
 };
 
-struct swf_clip {
-	struct swf_clip *next;
-	struct swf_movie *movie;
-	struct swf_char *me;
-	struct swf_char *displaylist;
+struct swf_graphics {
+	uint8_t nfillbits, nlinebits;
+	uint16_t fs0, fs1, ls;
+};
 
-	// timeline
-	uint16_t frame;
-	uint16_t frame_next;
-	uint32_t pos_curr;
-	uint32_t pos_begin;
+struct swf_chardef {
+	struct swf_chardef* next;
 
-	uint8_t paused:1;
-	uint8_t end:1;
+	uint16_t id;
+	uint32_t pos;
 };
 
 struct swf_char {
@@ -105,26 +101,24 @@ struct swf_char {
 	struct swf_cxform cxform;
 };
 
-struct swf_chardef {
-	struct swf_chardef* next;
-
-	uint16_t id;
-	uint32_t pos;
-};
-
 struct swf_movie {
-	uint8_t version;
-	struct swf_rect frame_size;
-	uint16_t frame_rate; // fixed 8.8
-	uint16_t frame_cnt;
-
 	uint8_t* data;
 	uint32_t length;
 
 	struct swf_chardef* dict;
+	struct swf_char *displaylist;
 
-	struct swf_char rootchar;
-	struct swf_clip rootclip;
+	// timeline
+	uint8_t paused:1;
+	uint8_t end:1;
+	uint16_t frame;
+	uint16_t frame_next;
+	uint32_t pos;
+
+	uint8_t version;
+	struct swf_rect frame_size;
+	uint16_t frame_rate; // fixed 8.8
+	uint16_t frame_cnt;
 };
 
 #endif //_SWF_TYPES_H_

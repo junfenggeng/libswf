@@ -14,16 +14,16 @@ int main(int argc, char** argv)
 
 	filename = "test/sample.swf";
 
-	status = swf_movie_load_from_file(&movie, filename);
+	status = swf_open(&movie, filename);
 	if (status != 0) {
 		printf("failed to load swf movie from [%s]\n", filename);
 		goto out;
 	}
 
-	swf_movie_print_info(&movie);
+	swf_print_info(&movie);
 
-	swf_movie_advance(&movie);
-	swf_movie_render(&movie);
+	swf_advance(&movie);
+	swf_render(&movie);
 
 out:
 	return status;

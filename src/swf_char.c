@@ -5,11 +5,11 @@
 
 struct swf_char *swf_char_new()
 {
-	struct swf_char *ch;
+	struct swf_char *_char;
 
-	ch = (struct swf_char*) malloc(sizeof(struct swf_char));
+	_char = (struct swf_char*) malloc(sizeof(struct swf_char));
 
-	if (ch) memset(ch, 0, sizeof(struct swf_char));
+	if (_char) memset(_char, 0, sizeof(struct swf_char));
 
-	return ch;
+	return _char;
 }

@@ -195,7 +195,7 @@ int swf_advance(struct swf_movie* movie)
 	movie->pos = reader.pos;
 }
 
-int swf_render(struct swf_movie* movie)
+int swf_render(struct swf_movie* movie, struct swf_graphics *gc)
 {
 	struct swf_char *_char;
 
@@ -204,7 +204,7 @@ int swf_render(struct swf_movie* movie)
 	while (_char) {
 		printf("char: %d\n", _char->depth);
 
-		swf_draw_char(movie, _char);
+		swf_draw_char(movie, gc, _char);
 
 		_char = _char->next;
 	}
@@ -256,7 +256,9 @@ int swf_place_object(struct swf_movie *movie,
 	return 0;
 }
 
-int swf_draw_char(struct swf_movie *movie, struct swf_char *_char)
+int swf_draw_char(struct swf_movie *movie,
+		  struct swf_graphics *gc,
+		  struct swf_char *_char)
 {
 	struct swf_reader reader;
 	struct swf_taghdr hdr;
@@ -269,7 +271,7 @@ int swf_draw_char(struct swf_movie *movie, struct swf_char *_char)
 	swf_read_taghdr(&reader, &hdr);
 	switch (hdr.code) {
 	case 22: // defineShape2
-		swf_draw_shape(movie, _char, &reader, 2);
+		swf_draw_shape(movie, gc, _char, &reader, 2);
 		break;
 	}
 
@@ -370,12 +372,20 @@ static inline int read_shapesetup(struct swf_reader* reader,
 	int32_t dx, dy;
 	uint8_t move_bits;
 
+	if (gc->open) {
+		cairo_stroke(gc->cr);
+	}
+
+	gc->open = 1;
+
 	if (flags & 1) { // stateMoveTo
 		move_bits = swf_read_ub(reader, 5);
 		dx = swf_read_sb(reader, move_bits);
 		dy = swf_read_sb(reader, move_bits);
 		printf("move %d,%d\n",
 		       dx, dy);
+
+		cairo_move_to (gc->cr, dx, dy);
 	}
 	if (flags & 2) { // fillStyle0
 		gc->fs0 = swf_read_ub(reader, gc->nfillbits);
@@ -414,6 +424,7 @@ static inline int read_line(struct swf_reader* reader,
 	if (general == 1 || vert == 1)
 		dy = swf_read_sb(reader, nbits + 2);
 
+	cairo_rel_line_to(gc->cr, dx, dy);
 	printf("line %d,%d\n", dx, dy);
 }
 
@@ -434,14 +445,14 @@ static inline int read_curve(struct swf_reader *reader,
 }
 
 int swf_draw_shape(struct swf_movie *movie,
-			struct swf_char *_char,
-			struct swf_reader *reader,
-			uint8_t ver)
+		   struct swf_graphics *gc,
+		   struct swf_char *_char,
+		   struct swf_reader *reader,
+		   uint8_t ver)
 {
 	uint16_t id;
 	struct swf_rect bounds;
 	uint8_t end = 0;
-	struct swf_graphics gc;
 	int32_t dx, dy;
 
 	id = swf_read_u16(reader);
@@ -454,25 +465,29 @@ int swf_draw_shape(struct swf_movie *movie,
 	       bounds.ymin,
 	       bounds.ymax);
 
-	read_fillstylearray(reader, &gc, ver);
-	read_linestylearray(reader, &gc, ver);
-	gc.nfillbits = swf_read_ub(reader, 4);
-	gc.nlinebits = swf_read_ub(reader, 4);
+	read_fillstylearray(reader, gc, ver);
+	read_linestylearray(reader, gc, ver);
+	gc->nfillbits = swf_read_ub(reader, 4);
+	gc->nlinebits = swf_read_ub(reader, 4);
 
 	while (!end) {
 		uint8_t is_edge = swf_read_ub(reader, 1);
 
 		if (is_edge) {
 			uint8_t is_line = swf_read_ub(reader, 1);
-			if (is_line) read_line(reader, &gc);
-			else read_curve(reader, &gc);
+			if (is_line) read_line(reader, gc);
+			else read_curve(reader, gc);
 		} else {
 			uint8_t flags;
 			flags = swf_read_ub(reader, 5);
 			if (flags == 0) end = 1;
 			else {
-				read_shapesetup(reader, &gc, flags, ver);
+				read_shapesetup(reader, gc, flags, ver);
 			}
 		}
+	}
+
+	if (gc->open) {
+		cairo_stroke(gc->cr);
 	}
 }

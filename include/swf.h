@@ -7,7 +7,7 @@
 int swf_open(struct swf_movie *movie, const char *filename);
 int swf_print_info(struct swf_movie *movie);
 int swf_advance(struct swf_movie *movie);
-int swf_render(struct swf_movie *movie);
+int swf_render(struct swf_movie *movie, struct swf_graphics *gc);
 int swf_end(struct swf_movie *movie);
 
 struct swf_chardef *swf_find_chardef_with_id(struct swf_movie *movie,
@@ -15,8 +15,11 @@ struct swf_chardef *swf_find_chardef_with_id(struct swf_movie *movie,
 int swf_place_object(struct swf_movie *movie,
 		     uint16_t id,
 		     struct swf_char *_char);
-int swf_draw_char(struct swf_movie *movie, struct swf_char *_char);
+int swf_draw_char(struct swf_movie *movie,
+		  struct swf_graphics *gc,
+		  struct swf_char *_char);
 int swf_draw_shape(struct swf_movie *movie,
+		   struct swf_graphics *gc,
 		   struct swf_char *_char,
 		   struct swf_reader *reader,
 		   uint8_t ver);

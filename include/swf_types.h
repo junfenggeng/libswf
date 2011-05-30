@@ -2,6 +2,7 @@
 #define _SWF_TYPES_H_
 
 #include <stdint.h>
+#include <cairo.h>
 
 struct swf_clip;
 struct swf_char;
@@ -80,8 +81,12 @@ struct swf_reader {
 };
 
 struct swf_graphics {
+	cairo_t *cr;
+
 	uint8_t nfillbits, nlinebits;
 	uint16_t fs0, fs1, ls;
+
+	uint8_t open:1;
 };
 
 struct swf_chardef {

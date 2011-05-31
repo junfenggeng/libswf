@@ -280,30 +280,32 @@ int swf_draw_char(struct swf_movie *movie,
 
 static inline int read_fillstyle(struct swf_reader* reader,
 				 struct swf_graphics *gc,
+				 uint8_t i,
 				 uint8_t ver)
 {
 	uint8_t type;
-	struct swf_fillstyle fs;
+	struct swf_fillstyle* fs;
+	fs = &gc->fillstyle[i];
 
 	type = swf_read_u8(reader);
 
 	switch (type & 0xF0) {
 	case 0: // solid color
-		if (ver == 3) swf_read_rgba(reader, &fs.u.color);
-		else swf_read_rgb(reader, &fs.u.color);
+		if (ver == 3) swf_read_rgba(reader, &fs->u.color);
+		else swf_read_rgb(reader, &fs->u.color);
 		printf("fillstyle: solid color %d,%d,%d,%d\n",
-		       fs.u.color.r,
-		       fs.u.color.g,
-		       fs.u.color.b,
-		       fs.u.color.a);
+		       fs->u.color.r,
+		       fs->u.color.g,
+		       fs->u.color.b,
+		       fs->u.color.a);
 		break;
 	case 0x10: // gradient
-		swf_read_matrix(reader, &fs.mtx);
-		swf_read_gradient(reader, &fs.u.grad, ver);
+		swf_read_matrix(reader, &fs->mtx);
+		swf_read_gradient(reader, &fs->u.grad, ver);
 		break;
 	case 0x40: // bitmap
-		fs.u.bitmapid = swf_read_u16(reader);
-		swf_read_matrix(reader, &fs.mtx);
+		fs->u.bitmapid = swf_read_u16(reader);
+		swf_read_matrix(reader, &fs->mtx);
 		break;
 	default:
 		printf("fillstyle %d not supported\n");
@@ -322,29 +324,35 @@ static inline int read_fillstylearray(struct swf_reader* reader,
 	if (cnt == 0xFF)
 		cnt = swf_read_u16(reader);
 
+	if (gc->fillstyle) free(gc->fillstyle);
+	gc->nfillstyles = cnt;
+	gc->fillstyle = (struct swf_fillstyle*)
+		malloc(cnt * sizeof(struct swf_fillstyle));
+
 	printf("fillstylearray cnt=%d\n", cnt);
 	for (i=0; i<cnt; i++) {
-		read_fillstyle(reader, gc, ver);
+		read_fillstyle(reader, gc, i, ver);
 	}
 }
 
 static inline int read_linestyle(struct swf_reader* reader,
 				 struct swf_graphics *gc,
+				 uint8_t i,
 				 uint8_t ver)
 {
-	uint16_t width;
-	struct swf_color color;
-
-	width = swf_read_u16(reader);
+	gc->linestyle[i].width = swf_read_u16(reader);
 
 	if (ver == 3)
-		swf_read_rgba(reader, &color);
+		swf_read_rgba(reader, &gc->linestyle[i].color);
 	else
-		swf_read_rgb(reader, &color);
+		swf_read_rgb(reader, &gc->linestyle[i].color);
 
 	printf("linestyle %d %d,%d,%d,%d\n",
-	       width,
-	       color.r, color.g, color.b, color.a);
+	       gc->linestyle[i].width,
+	       gc->linestyle[i].color.r, 
+	       gc->linestyle[i].color.g, 
+	       gc->linestyle[i].color.b, 
+	       gc->linestyle[i].color.a);
 }
 
 static inline int read_linestylearray(struct swf_reader* reader,
@@ -359,8 +367,14 @@ static inline int read_linestylearray(struct swf_reader* reader,
 		cnt = swf_read_u16(reader);
 
 	printf("linestylearray cnt=%d\n", cnt);
+
+	if (gc->linestyle) free(gc->linestyle);
+	gc->nlinestyles = cnt;
+	gc->linestyle = (struct swf_linestyle*) 
+		malloc(cnt * sizeof(struct swf_linestyle));
+
 	for (i=0; i<cnt; i++) {
-		read_linestyle(reader, gc, ver);
+		read_linestyle(reader, gc, i, ver);
 	}
 }
 
@@ -373,7 +387,11 @@ static inline int read_shapesetup(struct swf_reader* reader,
 	uint8_t move_bits;
 
 	if (gc->open) {
-		cairo_stroke(gc->cr);
+		if (gc->ls)
+			cairo_stroke(gc->cr);
+
+		if (gc->fs0 || gc->fs1)
+			cairo_fill(gc->cr);
 	}
 
 	gc->open = 1;
@@ -390,16 +408,36 @@ static inline int read_shapesetup(struct swf_reader* reader,
 		cairo_move_to (gc->cr, dx, dy);
 	}
 	if (flags & 2) { // fillStyle0
+		struct swf_fillstyle *style;
 		gc->fs0 = swf_read_ub(reader, gc->nfillbits);
 		printf("fs0 %d\n", gc->fs0);
+		style = &gc->fillstyle[gc->fs0 - 1];
+		cairo_set_source_rgb (gc->cr,
+				      style->u.color.r/256.0,
+				      style->u.color.g/256.0,
+				      style->u.color.b/256.0);
 	}
 	if (flags & 4) { // fillStyle1
+		struct swf_fillstyle *style;
 		gc->fs1 = swf_read_ub(reader, gc->nfillbits);
 		printf("fs1 %d\n", gc->fs1);
+		style = &gc->fillstyle[gc->fs1 - 1];
+		cairo_set_source_rgb (gc->cr,
+				      style->u.color.r/256.0,
+				      style->u.color.g/256.0,
+				      style->u.color.b/256.0);
 	}
 	if (flags & 8) { // lineStyle
+		struct swf_linestyle *style;
 		gc->ls = swf_read_ub(reader, gc->nlinebits);
 		printf("ls %d\n", gc->ls);
+		style = &gc->linestyle[gc->ls - 1];
+		cairo_set_line_width(gc->cr, style->width);
+		cairo_set_line_cap(gc->cr, CAIRO_LINE_CAP_ROUND);
+		cairo_set_source_rgb (gc->cr,
+				      style->color.r/256.0,
+				      style->color.g/256.0,
+				      style->color.b/256.0);
 	}
 	if (flags & 0x10) { // newStyles
 		read_fillstylearray(reader, gc, ver);
@@ -467,6 +505,10 @@ int swf_draw_shape(struct swf_movie *movie,
 	       bounds.ymin,
 	       bounds.ymax);
 
+	gc->nfillstyles = gc->nlinestyles = 0;
+	gc->fillstyle = NULL;
+	gc->linestyle = NULL;
+
 	read_fillstylearray(reader, gc, ver);
 	read_linestylearray(reader, gc, ver);
 	gc->nfillbits = swf_read_ub(reader, 4);
@@ -489,7 +531,15 @@ int swf_draw_shape(struct swf_movie *movie,
 		}
 	}
 
+
 	if (gc->open) {
-		cairo_stroke(gc->cr);
+		if (gc->ls)
+			cairo_stroke(gc->cr);
+
+		if (gc->fs0 || gc->fs1)
+			cairo_fill(gc->cr);
 	}
+
+	if (gc->fillstyle) free(gc->fillstyle);
+	if (gc->linestyle) free(gc->linestyle);
 }

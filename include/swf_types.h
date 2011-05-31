@@ -46,6 +46,11 @@ static inline void swf_init_cxform(struct swf_cxform *c)
 	c->rat = c->gat = c->bat = c->aat = 0;
 }
 
+struct swf_linestyle {
+	uint16_t width;
+	struct swf_color color;
+};
+
 struct swf_gradrec {
 	uint8_t ratio;
 	struct swf_color color;
@@ -82,6 +87,10 @@ struct swf_reader {
 
 struct swf_graphics {
 	cairo_t *cr;
+
+	uint8_t nfillstyles, nlinestyles;
+	struct swf_fillstyle *fillstyle;
+	struct swf_linestyle *linestyle;
 
 	uint8_t nfillbits, nlinebits;
 	uint16_t fs0, fs1, ls;

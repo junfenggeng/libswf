@@ -103,10 +103,10 @@ paint (GtkWidget      *widget,
 	gc.cr = cr;
 
 	cairo_scale(cr, 400.0/movie.frame_size.xmax,
-		    400.0/movie.frame_size.ymax);
+		    400.0/movie.frame_size.xmax);
   
 	/* clear background */
-	cairo_set_source_rgb (cr, 0, 0, 0);
+	cairo_set_source_rgb (cr, 1, 1, 1);
 	cairo_paint (cr);
 
 	cairo_set_source_rgb (cr, 0,0,1);

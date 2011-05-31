@@ -377,6 +377,8 @@ static inline int read_shapesetup(struct swf_reader* reader,
 	}
 
 	gc->open = 1;
+	cairo_set_source_rgb (gc->cr, 0,0,1);
+	cairo_set_line_width (gc->cr, 20);
 
 	if (flags & 1) { // stateMoveTo
 		move_bits = swf_read_ub(reader, 5);

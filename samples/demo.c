@@ -9,7 +9,7 @@
 #include "swf.h"
 
 #define DEFAULT_WIDTH  400
-#define DEFAULT_HEIGHT 200
+#define DEFAULT_HEIGHT 400
 
 struct swf_movie movie;
 
@@ -102,11 +102,11 @@ paint (GtkWidget      *widget,
 	cr = gdk_cairo_create (widget->window);
 	gc.cr = cr;
 
-	swf_advance(&movie);
-	swf_render(&movie, &gc);
+	cairo_scale(cr, 400.0/movie.frame_size.xmax,
+		    400.0/movie.frame_size.ymax);
   
 	/* clear background */
-	cairo_set_source_rgb (cr, 1,1,1);
+	cairo_set_source_rgb (cr, 0, 0, 0);
 	cairo_paint (cr);
 
 	cairo_set_source_rgb (cr, 0,0,1);
@@ -115,6 +115,9 @@ paint (GtkWidget      *widget,
 	cairo_rel_line_to (cr, 5,  10);
 	cairo_rel_line_to (cr, 5, -10);
 	cairo_stroke (cr);
+
+	swf_advance(&movie);
+	swf_render(&movie, &gc);
 
 	cairo_destroy (cr);
 }
